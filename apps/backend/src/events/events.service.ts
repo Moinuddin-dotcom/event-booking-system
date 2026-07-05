@@ -1,26 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
-import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventsService {
-  create(createEventDto: CreateEventDto) {
-    return 'This action adds a new event';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(createEventDto: CreateEventDto) {
+    return this.prisma.event.create({
+      data: {
+        name: createEventDto.name,
+        description: createEventDto.description,
+        date: new Date(createEventDto.date),
+        totalSeats: createEventDto.totalSeats,
+        remainingSeats: createEventDto.totalSeats,
+        price: createEventDto.price,
+      },
+    });
   }
 
-  findAll() {
-    return `This action returns all events`;
+  async findAll() {
+    return this.prisma.event.findMany({
+      orderBy: {
+        date: 'asc',
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} event`;
-  }
+  async findOne(id: number) {
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+    });
 
-  update(id: number, updateEventDto: UpdateEventDto) {
-    return `This action updates a #${id} event`;
-  }
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} event`;
+    return event;
   }
 }
