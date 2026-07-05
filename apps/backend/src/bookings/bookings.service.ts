@@ -1,12 +1,21 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
-import { CreateBookingDto } from './dto/create-booking.dto';
 import { randomUUID } from 'crypto';
+
+import { PrismaService } from '../prisma/prisma.service';
+import { QueueService } from '../queue/queue.service';
+import { CreateBookingDto } from './dto/create-booking.dto';
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly queueService: QueueService,
+  ) {}
 
   async create(createBookingDto: CreateBookingDto) {
     const existingBooking = await this.prisma.booking.findUnique({
@@ -17,6 +26,16 @@ export class BookingsService {
 
     if (existingBooking) {
       throw new ConflictException('Duplicate requestId');
+    }
+
+    const event = await this.prisma.event.findUnique({
+      where: {
+        id: createBookingDto.eventId,
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
     }
 
     const booking = await this.prisma.booking.create({
@@ -30,6 +49,8 @@ export class BookingsService {
         status: BookingStatus.PENDING,
       },
     });
+
+    await this.queueService.addBookingJob(booking.id);
 
     return {
       message: 'Booking accepted for processing.',
