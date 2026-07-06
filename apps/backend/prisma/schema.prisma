@@ -7,48 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  FAILED
-}
-
 model Event {
   id             Int       @id @default(autoincrement())
   name           String
-  description    String?
   date           DateTime
   totalSeats     Int
   remainingSeats Int
   price          Decimal   @db.Decimal(10, 2)
-
-  bookings       Booking[]
-
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  description    String?
+  bookings       Booking[]
 }
 
 model Booking {
-  id               Int             @id @default(autoincrement())
-
-  bookingReference String          @unique
-  requestId        String          @unique
-
+  id               Int           @id @default(autoincrement())
+  bookingReference String        @unique
+  requestId        String        @unique
   eventId          Int
-  event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
   customerName     String
   customerEmail    String
-
   seats            Int
-
-  status           BookingStatus   @default(PENDING)
-
+  status           BookingStatus @default(PENDING)
   failureReason    String?
-
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  event            Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
   @@index([status])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  FAILED
 }
