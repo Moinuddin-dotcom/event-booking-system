@@ -9,73 +9,87 @@ export class BookingProcessor extends WorkerHost {
     super();
   }
 
-async process(job: Job) {
-  const booking = await this.prisma.booking.findUnique({
-    where: {
-      id: job.data.bookingId,
-    },
-  });
+  async process(job: Job) {
+    const booking = await this.prisma.booking.findUnique({
+      where: {
+         id: job.data.bookingId,
+      },
+    });
 
-  if (!booking) {
-    return;
+    if (!booking) {
+      return;
+    }
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const event = await tx.event.findUnique({
+          where: {
+            id: booking.eventId,
+          },
+        });
+
+        if (!event) {
+          await tx.booking.update({
+            where: {
+              id: booking.id,
+            },
+            data: {
+              status: 'FAILED',
+              failureReason: 'Event not found',
+            },
+          });
+
+          return;
+        }
+
+        if (event.remainingSeats < booking.seats) {
+          await tx.booking.update({
+            where: {
+              id: booking.id,
+            },
+            data: {
+              status: 'FAILED',
+              failureReason: 'Not enough seats available',
+            },
+          });
+
+          return;
+        }
+
+        await tx.event.update({
+          where: {
+            id: event.id,
+          },
+          data: {
+            remainingSeats: {
+              decrement: booking.seats,
+            },
+          },
+        });
+
+        await tx.booking.update({
+          where: {
+            id: booking.id,
+          },
+          data: {
+            status: 'CONFIRMED',
+            failureReason: null,
+          },
+        });
+      });
+    } catch (error) {
+      await this.prisma.booking.update({
+        where: {
+          id: booking.id,
+        },
+        data: {
+          status: 'FAILED',
+          failureReason:
+            error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
+      throw error;
+    }
   }
-
-  await this.prisma.$transaction(async (tx) => {
-    const event = await tx.event.findUnique({
-      where: {
-        id: booking.eventId,
-      },
-    });
-
-    if (!event) {
-      await tx.booking.update({
-        where: {
-          id: booking.id,
-        },
-        data: {
-          status: 'FAILED',
-          failureReason: 'Event not found',
-        },
-      });
-
-      return;
-    }
-
-    if (event.remainingSeats < booking.seats) {
-      await tx.booking.update({
-        where: {
-          id: booking.id,
-        },
-        data: {
-          status: 'FAILED',
-          failureReason: 'Not enough seats available',
-        },
-      });
-
-      return;
-    }
-
-    await tx.event.update({
-      where: {
-        id: event.id,
-      },
-      data: {
-        remainingSeats: {
-          decrement: booking.seats,
-        },
-      },
-    });
-
-    await tx.booking.update({
-      where: {
-        id: booking.id,
-      },
-      data: {
-        status: 'CONFIRMED',
-      },
-    });
-  });
-}
-
-  
 }
