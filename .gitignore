@@ -7,8 +7,6 @@ build/
 coverage/
 
 # Environment
-.env
-.env.*
 
 # Logs
 *.log
@@ -27,3 +25,4 @@ generated/
 
 # NestJS
 *.tsbuildinfo
+config.bat
