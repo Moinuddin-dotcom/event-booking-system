@@ -2,19 +2,29 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getEvents } from '../api/events';
 import EventCard from '../components/EventCard';
+import { useBookings } from '../hooks/useBookings';
+import BookingsTable from '../components/BookingsTable';
 
 function Home() {
     const {
         data: events,
-        isLoading,
+        isLoading: eventsLoading,
         error,
     } = useQuery({
         queryKey: ['events'],
         queryFn: getEvents,
     });
 
-    if (isLoading) {
+    const {
+        data: bookings,
+        isLoading: bookingsLoading,
+    } = useBookings();
+
+    if (eventsLoading) {
         return <h2>Loading events...</h2>;
+    }
+    if (bookingsLoading) {
+        return <h2>Loading bookings...</h2>;
     }
 
     if (error) {
@@ -23,6 +33,7 @@ function Home() {
 
     return (
         <main className="mx-auto max-w-5xl p-6">
+
             <h1 className="mb-8 text-center text-4xl font-bold">
                 Event Booking System
             </h1>
@@ -35,6 +46,16 @@ function Home() {
                     />
                 ))}
             </div>
+
+            <h2 className="my-10 mb-4 text-2xl font-bold text-white">
+                Bookings
+            </h2>
+
+            {bookingsLoading ? (
+                <p className="text-white">Loading bookings...</p>
+            ) : (
+                <BookingsTable bookings={bookings.data} />
+            )}
         </main>
     );
 }

@@ -416,7 +416,7 @@ Docker services include
 
 ## Home Page
 
-![alt text](Home.png)
+![alt text](home-2.png)
 
 ---
 
