@@ -7,8 +7,6 @@ build/
 coverage/
 
 # Environment
-.env
-.env.*
 
 # Logs
 *.log
@@ -19,7 +17,6 @@ logs/
 Thumbs.db
 
 # IDE
-.vscode/
 .idea/
 
 # Prisma
@@ -27,3 +24,4 @@ generated/
 
 # NestJS
 *.tsbuildinfo
+config.bat
